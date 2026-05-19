@@ -46,29 +46,15 @@
 {% set sniper = battle.get('sniper_points', {}) if battle else {} %}
 {% if sniper.ideal_buy or sniper.stop_loss or sniper.take_profit %}
 {% set ns = namespace(parts=[]) %}
-{% if sniper.ideal_buy %}{% set ns.parts = ns.parts + ['🎯' ~ labels.ideal_buy_label ~ ':' ~ (sniper.ideal_buy|string)[:15]] %}{% endif %}
-{% if sniper.stop_loss %}{% set ns.parts = ns.parts + ['🛑' ~ labels.stop_loss_label ~ ':' ~ (sniper.stop_loss|string)[:15]] %}{% endif %}
-{% if sniper.take_profit %}{% set ns.parts = ns.parts + ['🎊' ~ labels.take_profit_label ~ ':' ~ (sniper.take_profit|string)[:15]] %}{% endif %}
+{% if sniper.ideal_buy %}{% set ns.parts = ns.parts + ['🎯' + clean_sniper(sniper.ideal_buy, [labels.ideal_buy_label])] %}{% endif %}
+{% if sniper.stop_loss %}{% set ns.parts = ns.parts + ['🛑' + clean_sniper(sniper.stop_loss, [labels.stop_loss_label])] %}{% endif %}
+{% if sniper.take_profit %}{% set ns.parts = ns.parts + ['🎊' + clean_sniper(sniper.take_profit, [labels.take_profit_label])] %}{% endif %}
 {{ ns.parts|join(' | ') }}
 {% endif %}
 
 {% set pos_advice = core.get('position_advice', {}) if core else {} %}
-{% if pos_advice %}
 {% if pos_advice.get('no_position') %}
-🆕 {{ labels.no_position_label }}: {{ pos_advice.no_position[:50] }}
-{% endif %}
-{% if pos_advice.get('has_position') %}
-💼 {{ labels.has_position_label }}: {{ pos_advice.has_position[:50] }}
-{% endif %}
-{% endif %}
-
-{% set checklist = battle.get('action_checklist', []) if battle else [] %}
-{% set fc = failed_checks(checklist) %}
-{% if fc %}
-**{{ labels.failed_checks_heading }}**:
-{% for check in fc[:3] %}
-   {{ check[:40] }}
-{% endfor %}
+📌 操作建议: {{ pos_advice.no_position[:80] }}
 {% endif %}
 
 ---

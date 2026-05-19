@@ -61,13 +61,10 @@
 
 {% set pos_advice = core.get('position_advice', {}) %}
 {% if pos_advice %}
-| {{ labels.position_status_label }} | {{ labels.action_advice_label }} |
-|---------|---------|
-| 🆕 **{{ labels.no_position_label }}** | {{ pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language)) }} |
-| 💼 **{{ labels.has_position_label }}** | {{ pos_advice.get('has_position', labels.continue_holding) }} |
+**操作建议**: {{ pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language)) }}
 {% endif %}
 
-{{ market_snapshot(result) }}
+{{ market_snapshot(result, labels, report_language) }}
 
 {% if data_persp %}
 ### 📊 {{ labels.data_perspective_heading }}
@@ -79,15 +76,8 @@
 
 {% set price_data = data_persp.get('price_position', {}) %}
 {% if price_data %}
-| {{ labels.price_metrics_label }} | {{ labels.current_price_label }} |
-|---------|------|
-| {{ labels.current_price_label }} | {{ price_data.get('current_price', 'N/A') }} |
-| {{ labels.ma5_label }} | {{ price_data.get('ma5', 'N/A') }} |
-| {{ labels.ma10_label }} | {{ price_data.get('ma10', 'N/A') }} |
-| {{ labels.ma20_label }} | {{ price_data.get('ma20', 'N/A') }} |
-| {{ labels.bias_ma5_label }} | {{ price_data.get('bias_ma5', 'N/A') }}% {{ price_data.get('bias_status', 'N/A') }} |
-| {{ labels.support_level_label }} | {{ price_data.get('support_level', 'N/A') }} |
-| {{ labels.resistance_level_label }} | {{ price_data.get('resistance_level', 'N/A') }} |
+**价格**: 当前{{ price_data.get('current_price', 'N/A') }} | MA5 {{ price_data.get('ma5', 'N/A') }} MA10 {{ price_data.get('ma10', 'N/A') }} MA20 {{ price_data.get('ma20', 'N/A') }} | 乖离 {{ price_data.get('bias_ma5', 'N/A') }}% {{ price_data.get('bias_status', 'N/A') }}
+支撑 {{ price_data.get('support_level', 'N/A') }} | 压力 {{ price_data.get('resistance_level', 'N/A') }}
 {% endif %}
 
 {% set vol_data = data_persp.get('volume_analysis', {}) %}
@@ -108,13 +98,7 @@
 {% set sniper = battle.get('sniper_points', {}) %}
 {% if sniper %}
 **📍 {{ labels.action_points_heading }}**
-
-| {{ labels.action_points_heading }} | {{ labels.current_price_label }} |
-|---------|------|
-| 🎯 {{ labels.ideal_buy_label }} | {{ clean_sniper(sniper.get('ideal_buy')) }} |
-| 🔵 {{ labels.secondary_buy_label }} | {{ clean_sniper(sniper.get('secondary_buy')) }} |
-| 🛑 {{ labels.stop_loss_label }} | {{ clean_sniper(sniper.get('stop_loss')) }} |
-| 🎊 {{ labels.take_profit_label }} | {{ clean_sniper(sniper.get('take_profit')) }} |
+🎯 {{ clean_sniper(sniper.get('ideal_buy'), [labels.ideal_buy_label]) }} | 🛑 {{ clean_sniper(sniper.get('stop_loss'), [labels.stop_loss_label]) }} | 🎊 {{ clean_sniper(sniper.get('take_profit'), [labels.take_profit_label]) }}
 {% endif %}
 
 {% set position = battle.get('position_strategy', {}) %}
@@ -122,14 +106,6 @@
 **💰 {{ labels.suggested_position_label }}**: {{ position.get('suggested_position', 'N/A') }}
 - {{ labels.entry_plan_label }}: {{ position.get('entry_plan', 'N/A') }}
 - {{ labels.risk_control_label }}: {{ position.get('risk_control', 'N/A') }}
-{% endif %}
-
-{% set checklist = battle.get('action_checklist', []) %}
-{% if checklist %}
-**✅ {{ labels.checklist_heading }}**
-{% for item in checklist %}
-- {{ item }}
-{% endfor %}
 {% endif %}
 {% endif %}
 
@@ -145,10 +121,8 @@
 {% set hist = history_by_code.get(result.code, []) %}
 {% if hist %}
 ### 📜 {{ labels.history_compare_heading }}
-| {{ labels.time_label }} | {{ labels.score_label }} | {{ labels.advice_label }} | {{ labels.trend_label }} |
-|------|------|------|------|
 {% for h in hist %}
-| {{ h.created_at[:16] if h.created_at else 'N/A' }} | {{ h.sentiment_score or 'N/A' }} | {{ localize_operation_advice(h.operation_advice or 'N/A', report_language) }} | {{ localize_trend_prediction(h.trend_prediction or 'N/A', report_language) }} |
+- {{ h.created_at[:16] if h.created_at else 'N/A' }} | 评分 {{ h.sentiment_score or 'N/A' }} | {{ localize_operation_advice(h.operation_advice or 'N/A', report_language) }} | {{ localize_trend_prediction(h.trend_prediction or 'N/A', report_language) }}
 {% endfor %}
 {% endif %}
 
