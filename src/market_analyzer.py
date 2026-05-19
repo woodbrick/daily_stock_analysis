@@ -712,31 +712,19 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
         return "\n".join(lines)
 
     def _build_news_block(self, news: List) -> str:
-        """Build a source-aware news catalyst table for the rendered report."""
+        """Build a source-aware news catalyst block for the rendered report."""
         if not news:
             return ""
         if self._get_review_language() == "en":
-            lines = [
-                "#### News Catalysts",
-                "| # | Headline | Snippet / Lead | Source |",
-                "|---|----------|----------------|--------|",
-            ]
+            lines = ["**Catalyst Clues (3 days)**:"]
         else:
-            lines = [
-                "#### 近三日催化线索",
-                "| 序号 | 事件/标题 | 摘要/线索片段 | 来源 |",
-                "|------|-----------|----------------|------|",
-            ]
+            lines = ["**近三日催化线索**："]
 
         for idx, item in enumerate(news[:5], 1):
-            title = self._escape_table_cell(
-                self._compact_news_text(self._get_news_field(item, "title"), limit=80) or "-"
-            )
-            snippet = self._escape_table_cell(
-                self._compact_news_text(self._get_news_field(item, "snippet"), limit=180) or "-"
-            )
-            source = self._escape_table_cell(self._format_news_source_cell(item) or "-")
-            lines.append(f"| {idx} | {title} | {snippet} | {source} |")
+            source = self._get_news_field(item, "source") or "未知来源"
+            date_text = self._get_news_field(item, "published_date") or ""
+            date_part = f"({date_text})" if date_text else ""
+            lines.append(f"{idx}. [{source}]{date_part}")
         return "\n".join(lines)
 
     @staticmethod
