@@ -186,8 +186,8 @@ _REPORT_LABELS: Dict[str, Dict[str, str]] = {
         "default_time_sensitivity": "本周内",
         "position_status_label": "持仓情况",
         "action_advice_label": "操作建议",
-        "no_position_label": "空仓者",
-        "has_position_label": "持仓者",
+        "no_position_label": "",
+        "has_position_label": "",
         "continue_holding": "继续持有",
         "market_snapshot_heading": "当日行情",
         "close_label": "收盘",
@@ -227,7 +227,7 @@ _REPORT_LABELS: Dict[str, Dict[str, str]] = {
         "entry_plan_label": "建仓策略",
         "risk_control_label": "风控策略",
         "checklist_heading": "检查清单",
-        "failed_checks_heading": "检查未通过项",
+        "failed_checks_heading": "",
         "history_compare_heading": "历史信号对比",
         "time_label": "时间",
         "score_label": "评分",
@@ -266,8 +266,8 @@ _REPORT_LABELS: Dict[str, Dict[str, str]] = {
         "default_time_sensitivity": "This week",
         "position_status_label": "Position",
         "action_advice_label": "Action",
-        "no_position_label": "No Position",
-        "has_position_label": "Holding",
+        "no_position_label": "",
+        "has_position_label": "",
         "continue_holding": "Continue holding",
         "market_snapshot_heading": "Market Snapshot",
         "close_label": "Close",
@@ -299,15 +299,15 @@ _REPORT_LABELS: Dict[str, Dict[str, str]] = {
         "resistance_level_label": "Resistance",
         "chip_label": "Chip Structure",
         "battle_plan_heading": "Battle Plan",
-        "ideal_buy_label": "Ideal Entry",
-        "secondary_buy_label": "Secondary Entry",
+        "ideal_buy_label": "Ideal Buy",
+        "secondary_buy_label": "Alt Buy",
         "stop_loss_label": "Stop Loss",
         "take_profit_label": "Target",
         "suggested_position_label": "Position Size",
         "entry_plan_label": "Entry Plan",
         "risk_control_label": "Risk Control",
         "checklist_heading": "Checklist",
-        "failed_checks_heading": "Failed Checks",
+        "failed_checks_heading": "",
         "history_compare_heading": "Historical Signal Comparison",
         "time_label": "Time",
         "score_label": "Score",
@@ -358,7 +358,6 @@ _DECISION_INTENT_NEGATION_CONNECTORS = (
 
 
 def _strip_decision_negation_connectors(text: str) -> str:
-    """Remove common advisory connectors between a negation token and decision word."""
     suffix = text.strip()
     changed = True
     while changed:
@@ -372,7 +371,6 @@ def _strip_decision_negation_connectors(text: str) -> str:
 
 
 def normalize_report_language(value: Optional[str], default: str = "zh") -> str:
-    """Normalize report language to a supported short code."""
     candidate = (value or default).strip().lower().replace(" ", "_")
     candidate = _REPORT_LANGUAGE_ALIASES.get(candidate, candidate)
     if candidate in SUPPORTED_REPORT_LANGUAGES:
@@ -381,7 +379,6 @@ def normalize_report_language(value: Optional[str], default: str = "zh") -> str:
 
 
 def is_supported_report_language_value(value: Optional[str]) -> bool:
-    """Return whether the raw value is a supported language code or alias."""
     candidate = (value or "").strip().lower().replace(" ", "_")
     if not candidate:
         return False
@@ -389,23 +386,19 @@ def is_supported_report_language_value(value: Optional[str]) -> bool:
 
 
 def get_report_labels(language: Optional[str]) -> Dict[str, str]:
-    """Return UI copy for the selected report language."""
     normalized = normalize_report_language(language)
     return _REPORT_LABELS[normalized]
 
 
 def get_placeholder_text(language: Optional[str]) -> str:
-    """Return placeholder text for missing localized content."""
     return _PLACEHOLDER_BY_LANGUAGE[normalize_report_language(language)]
 
 
 def get_unknown_text(language: Optional[str]) -> str:
-    """Return localized unknown text."""
     return _UNKNOWN_BY_LANGUAGE[normalize_report_language(language)]
 
 
 def get_no_data_text(language: Optional[str]) -> str:
-    """Return localized data unavailable text."""
     return _NO_DATA_BY_LANGUAGE[normalize_report_language(language)]
 
 
@@ -417,7 +410,6 @@ def _iter_lookup_candidates(value: Any) -> list[str]:
     raw_text = str(value or "").strip()
     if not raw_text:
         return []
-
     candidates = [raw_text]
     for part in re.split(r"[/|,，、]+", raw_text):
         normalized = part.strip()
@@ -437,13 +429,11 @@ def _canonicalize_lookup_value(value: Any, canonical_map: Dict[str, str]) -> Opt
 def _first_non_negated_position(text: str, token: str) -> Optional[int]:
     if not text or not token:
         return None
-
     normalized_text = text.lower().strip()
     if any(ch in normalized_text for ch in "abcdefghijklmnopqrstuvwxyz"):
         matches = list(re.finditer(rf"(?<![a-z0-9_]){re.escape(token)}(?![a-z0-9_])", normalized_text))
     else:
         matches = list(re.finditer(re.escape(token), normalized_text))
-
     for match in matches:
         prefix = normalized_text[: match.start()]
         if any(prefix.rstrip().endswith(neg) for neg in _DECISION_INTENT_NEGATIONS):
@@ -484,32 +474,22 @@ def _is_placeholder_stock_name(value: Any, code: Any = None) -> bool:
     text = str(value or "").strip()
     if not text:
         return True
-
     lowered = text.lower()
     if lowered in {"n/a", "na", "none", "null", "unknown"}:
         return True
     if text in {"-", "—", "未知", "待补充"}:
         return True
-
     code_text = str(code or "").strip()
     if code_text and lowered == code_text.lower():
         return True
-
     return text.startswith("股票")
 
 
-def _translate_from_map(
-    value: Any,
-    language: Optional[str],
-    *,
-    canonical_map: Dict[str, str],
-    translations: Dict[str, Dict[str, str]],
-) -> str:
+def _translate_from_map(value, language, *, canonical_map, translations):
     normalized_language = normalize_report_language(language)
     raw_text = str(value or "").strip()
     if not raw_text:
         return raw_text
-
     canonical = _canonicalize_lookup_value(raw_text, canonical_map)
     if canonical:
         return translations[canonical][normalized_language]
@@ -517,17 +497,10 @@ def _translate_from_map(
 
 
 def localize_operation_advice(value: Any, language: Optional[str]) -> str:
-    """Translate operation advice between Chinese and English when recognized."""
-    return _translate_from_map(
-        value,
-        language,
-        canonical_map=_OPERATION_ADVICE_CANONICAL_MAP,
-        translations=_OPERATION_ADVICE_TRANSLATIONS,
-    )
+    return _translate_from_map(value, language, canonical_map=_OPERATION_ADVICE_CANONICAL_MAP, translations=_OPERATION_ADVICE_TRANSLATIONS)
 
 
 def localize_trend_prediction(value: Any, language: Optional[str]) -> str:
-    """Translate trend prediction between Chinese and English when recognized."""
     normalized_language = normalize_report_language(language)
     raw_text = str(value or "").strip()
     if not raw_text:
@@ -535,46 +508,22 @@ def localize_trend_prediction(value: Any, language: Optional[str]) -> str:
     if normalized_language == "zh":
         if re.search(r"[\u4e00-\u9fff]", raw_text):
             return raw_text
-    return _translate_from_map(
-        value,
-        normalized_language,
-        canonical_map=_TREND_PREDICTION_CANONICAL_MAP,
-        translations=_TREND_PREDICTION_TRANSLATIONS,
-    )
+    return _translate_from_map(value, normalized_language, canonical_map=_TREND_PREDICTION_CANONICAL_MAP, translations=_TREND_PREDICTION_TRANSLATIONS)
 
 
 def localize_confidence_level(value: Any, language: Optional[str]) -> str:
-    """Translate confidence level between Chinese and English when recognized."""
-    return _translate_from_map(
-        value,
-        language,
-        canonical_map=_CONFIDENCE_LEVEL_CANONICAL_MAP,
-        translations=_CONFIDENCE_LEVEL_TRANSLATIONS,
-    )
+    return _translate_from_map(value, language, canonical_map=_CONFIDENCE_LEVEL_CANONICAL_MAP, translations=_CONFIDENCE_LEVEL_TRANSLATIONS)
 
 
 def localize_chip_health(value: Any, language: Optional[str]) -> str:
-    """Translate chip health labels between Chinese and English when recognized."""
-    return _translate_from_map(
-        value,
-        language,
-        canonical_map=_CHIP_HEALTH_CANONICAL_MAP,
-        translations=_CHIP_HEALTH_TRANSLATIONS,
-    )
+    return _translate_from_map(value, language, canonical_map=_CHIP_HEALTH_CANONICAL_MAP, translations=_CHIP_HEALTH_TRANSLATIONS)
 
 
 def localize_bias_status(value: Any, language: Optional[str]) -> str:
-    """Translate price bias status labels between Chinese and English when recognized."""
-    return _translate_from_map(
-        value,
-        language,
-        canonical_map=_BIAS_STATUS_CANONICAL_MAP,
-        translations=_BIAS_STATUS_TRANSLATIONS,
-    )
+    return _translate_from_map(value, language, canonical_map=_BIAS_STATUS_CANONICAL_MAP, translations=_BIAS_STATUS_TRANSLATIONS)
 
 
 def get_bias_status_emoji(value: Any) -> str:
-    """Return the stable alert emoji for a localized or canonical bias status."""
     canonical = _canonicalize_lookup_value(value, _BIAS_STATUS_CANONICAL_MAP)
     if canonical == "safe":
         return "✅"
@@ -584,7 +533,6 @@ def get_bias_status_emoji(value: Any) -> str:
 
 
 def infer_decision_type_from_advice(value: Any, default: str = "hold") -> str:
-    """Infer buy/hold/sell from human-readable operation advice."""
     canonical = _canonicalize_lookup_value(value, _OPERATION_ADVICE_CANONICAL_MAP)
     if canonical in {"strong_buy", "buy"}:
         return "buy"
@@ -592,7 +540,6 @@ def infer_decision_type_from_advice(value: Any, default: str = "hold") -> str:
         return "sell"
     if canonical in {"hold", "watch"}:
         return "hold"
-
     normalized_text = _normalize_lookup_key(value)
     best_position: Optional[int] = None
     best_canonical: Optional[str] = None
@@ -604,19 +551,16 @@ def infer_decision_type_from_advice(value: Any, default: str = "hold") -> str:
         if best_position is None or pos < best_position:
             best_position = pos
             best_canonical = canonical
-
     if best_canonical in {"strong_buy", "buy"}:
         return "buy"
     if best_canonical in {"reduce", "sell", "strong_sell"}:
         return "sell"
     if best_canonical in {"hold", "watch"}:
         return "hold"
-
     return default
 
 
 def get_signal_level(advice: Any, score: Any, language: Optional[str]) -> tuple[str, str, str]:
-    """Return localized signal text, emoji, and stable color tag."""
     normalized_language = normalize_report_language(language)
     canonical = _canonicalize_lookup_value(advice, _OPERATION_ADVICE_CANONICAL_MAP)
     if canonical == "strong_buy":
@@ -631,12 +575,10 @@ def get_signal_level(advice: Any, score: Any, language: Optional[str]) -> tuple[
         return (_OPERATION_ADVICE_TRANSLATIONS["reduce"][normalized_language], "🟠", "reduce")
     if canonical in {"sell", "strong_sell"}:
         return (_OPERATION_ADVICE_TRANSLATIONS["sell"][normalized_language], "🔴", "sell")
-
     try:
         numeric_score = int(float(score))
     except (TypeError, ValueError):
         numeric_score = 50
-
     if numeric_score >= 80:
         return (_OPERATION_ADVICE_TRANSLATIONS["strong_buy"][normalized_language], "💚", "strong_buy")
     if numeric_score >= 65:
@@ -651,7 +593,6 @@ def get_signal_level(advice: Any, score: Any, language: Optional[str]) -> tuple[
 
 
 def get_localized_stock_name(value: Any, code: Any, language: Optional[str]) -> str:
-    """Return a localized stock name placeholder when the original name is missing."""
     raw_text = str(value or "").strip()
     if not _is_placeholder_stock_name(raw_text, code):
         return raw_text
@@ -659,7 +600,6 @@ def get_localized_stock_name(value: Any, code: Any, language: Optional[str]) -> 
 
 
 def get_sentiment_label(score: int, language: Optional[str]) -> str:
-    """Return localized sentiment label by score band."""
     normalized = normalize_report_language(language)
     if normalized == "en":
         if score >= 80:
@@ -671,7 +611,6 @@ def get_sentiment_label(score: int, language: Optional[str]) -> str:
         if score >= 20:
             return "Bearish"
         return "Very Bearish"
-
     if score >= 80:
         return "极度乐观"
     if score >= 60:

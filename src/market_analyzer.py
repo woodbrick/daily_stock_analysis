@@ -573,17 +573,15 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
         up_ratio = overview.up_count / participation if participation else 0.0
         limit_spread = overview.limit_up_count - overview.limit_down_count
         lines = [
-            f"> **大盘红绿灯**：{light['status']}（{light['label']}） | **{score}/100** {self._build_temperature_bar(score)}",
-            f"> **核心原因**：{'；'.join(light['reasons'])}",
-            f"> **操作建议**：{light['guidance']}",
+            f"> **大盘红绿灯**: {light['status']}（{light['label']}） | **{score}/100** {self._build_temperature_bar(score)}",
+            f"> **核心原因**: {'；'.join(light['reasons'])}",
+            f"> **操作建议**: {light['guidance']}",
             "",
-            f"> **盘面温度**：{label} **{score}/100** {self._build_temperature_bar(score)}",
+            f"> **盘面温度**: {label} **{score}/100** {self._build_temperature_bar(score)}",
             "",
-            "| 指标 | 数值 | 观察 |",
-            "|------|------|------|",
-            f"| 上涨/下跌/平盘 | {overview.up_count} / {overview.down_count} / {overview.flat_count} | 上涨占比(不含平盘) {up_ratio:.1%} |",
-            f"| 涨停/跌停 | {overview.limit_up_count} / {overview.limit_down_count} | 涨跌停差 {limit_spread:+d} |",
-            f"| 两市成交额 | {overview.total_amount:.0f} 亿 | {self._describe_turnover(overview.total_amount)} |",
+            f"上涨 {overview.up_count} / 下跌 {overview.down_count} / 平盘 {overview.flat_count}（上涨占比 {up_ratio:.1%}）",
+            f"涨停 {overview.limit_up_count} / 跌停 {overview.limit_down_count}（差 {limit_spread:+d}）",
+            f"成交额 {overview.total_amount:.0f} 亿（{self._describe_turnover(overview.total_amount)}）",
         ]
         return "\n".join(lines)
 
@@ -672,23 +670,17 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
         if not overview.indices:
             return ""
         if self._get_review_language() == "en":
-            lines = [
-                f"| Index | Last | Change % | Open | High | Low | Amplitude | Turnover ({self._get_turnover_unit_label()}) |",
-                "|-------|------|----------|------|------|-----|-----------|-----------------|",
-            ]
+            lines = ["**Index Performance**: "]
         else:
-            lines = [
-                "| 指数 | 最新 | 涨跌幅 | 开盘 | 最高 | 最低 | 振幅 | 成交额(亿) |",
-                "|------|------|--------|------|------|------|------|-----------|",
-            ]
+            lines = ["**指数表现**："]
         for idx in overview.indices:
             arrow = self._get_index_change_arrow(idx.change_pct)
             amount_raw = idx.amount or 0.0
             amount_str = self._format_turnover_value(amount_raw)
             lines.append(
-                f"| {idx.name} | {idx.current:.2f} | {arrow} {idx.change_pct:+.2f}% | "
-                f"{self._format_optional_number(idx.open)} | {self._format_optional_number(idx.high)} | "
-                f"{self._format_optional_number(idx.low)} | {self._format_optional_pct(idx.amplitude)} | {amount_str} |"
+                f"{idx.name} {idx.current:.2f} {arrow} {idx.change_pct:+.2f}% "
+                f"（开{self._format_optional_number(idx.open)} 高{self._format_optional_number(idx.high)} "
+                f"低{self._format_optional_number(idx.low)} 振幅{self._format_optional_pct(idx.amplitude)} 成交{amount_str}）"
             )
         return "\n".join(lines)
 
@@ -699,39 +691,23 @@ Focus on index trend, liquidity, and sector rotation to shape the next-session t
         lines = []
         if overview.top_sectors:
             if self._get_review_language() == "en":
-                lines.extend([
-                    "#### Leading Sectors",
-                    "| Rank | Sector | Change |",
-                    "|------|--------|--------|",
-                ])
+                lines.append("#### Leading Sectors")
             else:
-                lines.extend([
-                    "#### 领涨板块 Top 5",
-                    "| 排名 | 板块 | 涨跌幅 |",
-                    "|------|------|--------|",
-                ])
+                lines.append("#### 领涨板块")
             for rank, sector in enumerate(overview.top_sectors[:5], 1):
                 lines.append(
-                    f"| {rank} | {sector.get('name', '-')} | {self._format_signed_pct(sector.get('change_pct'))} |"
+                    f"{rank}. {sector.get('name', '-')} {self._format_signed_pct(sector.get('change_pct'))}"
                 )
         if overview.bottom_sectors:
             if lines:
                 lines.append("")
             if self._get_review_language() == "en":
-                lines.extend([
-                    "#### Lagging Sectors",
-                    "| Rank | Sector | Change |",
-                    "|------|--------|--------|",
-                ])
+                lines.append("#### Lagging Sectors")
             else:
-                lines.extend([
-                    "#### 领跌板块 Top 5",
-                    "| 排名 | 板块 | 涨跌幅 |",
-                    "|------|------|--------|",
-                ])
+                lines.append("#### 领跌板块")
             for rank, sector in enumerate(overview.bottom_sectors[:5], 1):
                 lines.append(
-                    f"| {rank} | {sector.get('name', '-')} | {self._format_signed_pct(sector.get('change_pct'))} |"
+                    f"{rank}. {sector.get('name', '-')} {self._format_signed_pct(sector.get('change_pct'))}"
                 )
         return "\n".join(lines)
 
@@ -1116,13 +1092,9 @@ Output the report content directly, no extra commentary.
             if self.profile.has_market_stats:
                 stats_section = f"""
 ### 3. Breadth & Liquidity
-| Metric | Value |
-|--------|-------|
-| Advancers | {overview.up_count} |
-| Decliners | {overview.down_count} |
-| Limit-up | {overview.limit_up_count} |
-| Limit-down | {overview.limit_down_count} |
-| Turnover ({self._get_turnover_unit_label()}) | {overview.total_amount:.0f} |
+Advancers: {overview.up_count} | Decliners: {overview.down_count}
+Limit-up: {overview.limit_up_count} | Limit-down: {overview.limit_down_count}
+Turnover ({self._get_turnover_unit_label()}): {overview.total_amount:.0f}
 """
             sector_section = ""
             if self.profile.has_sector_rankings and (top_text or bottom_text):

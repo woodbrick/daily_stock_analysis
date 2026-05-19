@@ -893,7 +893,8 @@ class NotificationService(
         return name.replace('*', r'\*') if name else name
 
     @staticmethod
-    def _clean_sniper_value(value: Any) -> str:
+    @staticmethod
+    def _clean_sniper_value(value: Any, label_prefixes: Optional[List[str]] = None) -> str:
         """Normalize sniper point values and remove redundant label prefixes."""
         if value is None:
             return 'N/A'
@@ -901,15 +902,21 @@ class NotificationService(
             return str(value)
         if not isinstance(value, str):
             return str(value)
-        if not value or value == 'N/A':
-            return value
-        prefixes = ['理想买入点：', '次优买入点：', '止损位：', '目标位：',
+        text = str(value)
+        if not text or text == 'N/A':
+            return text
+        # Build prefix list from dynamic labels first, then static fallback
+        prefixes = label_prefixes or []
+        prefixes += ['理想买入点：', '次优买入点：', '止损位：', '目标位：',
                      '理想买入点:', '次优买入点:', '止损位:', '目标位:',
-                     'Ideal Entry:', 'Secondary Entry:', 'Stop Loss:', 'Target:']
+                     '理想买入：', '次优买入：', '止损：', '目标：',
+                     'Ideal Entry:', 'Secondary Entry:', 'Stop Loss:', 'Target:',
+                     'Buy:', 'Stop:', 'Target:']
         for prefix in prefixes:
-            if value.startswith(prefix):
-                return value[len(prefix):]
-        return value
+            prefix_text = prefix.strip()
+            if prefix_text and text.startswith(prefix_text):
+                return text[len(prefix_text):].lstrip('：: ')
+        return text
 
     def _get_signal_level(self, result: AnalysisResult) -> tuple:
         """Get localized signal level and color based on operation advice."""
@@ -1063,13 +1070,11 @@ class NotificationService(
                     f"⏰ **{labels['time_sensitivity_label']}**: {time_sense}",
                     "",
                 ])
-                # 持仓分类建议
+                # 操作建议
                 if pos_advice:
+                    no_pos_text = pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language))
                     report_lines.extend([
-                        f"| {labels['position_status_label']} | {labels['action_advice_label']} |",
-                        "|---------|---------|",
-                        f"| 🆕 **{labels['no_position_label']}** | {pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language))} |",
-                        f"| 💼 **{labels['has_position_label']}** | {pos_advice.get('has_position', labels['continue_holding'])} |",
+                        f"**操作建议**: {no_pos_text}",
                         "",
                     ])
 
@@ -1104,15 +1109,10 @@ class NotificationService(
                     if price_data:
                         bias_status = price_data.get('bias_status', 'N/A')
                         report_lines.extend([
-                            f"| {labels['price_metrics_label']} | {labels['current_price_label']} |",
-                            "|---------|------|",
-                            f"| {labels['current_price_label']} | {price_data.get('current_price', 'N/A')} |",
-                            f"| {labels['ma5_label']} | {price_data.get('ma5', 'N/A')} |",
-                            f"| {labels['ma10_label']} | {price_data.get('ma10', 'N/A')} |",
-                            f"| {labels['ma20_label']} | {price_data.get('ma20', 'N/A')} |",
-                            f"| {labels['bias_ma5_label']} | {price_data.get('bias_ma5', 'N/A')}% {bias_status} |",
-                            f"| {labels['support_level_label']} | {price_data.get('support_level', 'N/A')} |",
-                            f"| {labels['resistance_level_label']} | {price_data.get('resistance_level', 'N/A')} |",
+                            f"**价格**: 当前{price_data.get('current_price', 'N/A')} | "
+                            f"MA5 {price_data.get('ma5', 'N/A')} MA10 {price_data.get('ma10', 'N/A')} MA20 {price_data.get('ma20', 'N/A')} | "
+                            f"乖离 {price_data.get('bias_ma5', 'N/A')}% {bias_status}",
+                            f"支撑 {price_data.get('support_level', 'N/A')} | 压力 {price_data.get('resistance_level', 'N/A')}",
                             "",
                         ])
                     # 量能分析
@@ -1145,12 +1145,9 @@ class NotificationService(
                         report_lines.extend([
                             f"**📍 {labels['action_points_heading']}**",
                             "",
-                            f"| {labels['action_points_heading']} | {labels['current_price_label']} |",
-                            "|---------|------|",
-                            f"| 🎯 {labels['ideal_buy_label']} | {self._clean_sniper_value(sniper.get('ideal_buy', 'N/A'))} |",
-                            f"| 🔵 {labels['secondary_buy_label']} | {self._clean_sniper_value(sniper.get('secondary_buy', 'N/A'))} |",
-                            f"| 🛑 {labels['stop_loss_label']} | {self._clean_sniper_value(sniper.get('stop_loss', 'N/A'))} |",
-                            f"| 🎊 {labels['take_profit_label']} | {self._clean_sniper_value(sniper.get('take_profit', 'N/A'))} |",
+                            f"🎯 {labels['ideal_buy_label']} {self._clean_sniper_value(sniper.get('ideal_buy', 'N/A'), [labels['ideal_buy_label']])} | "
+                            f"🛑 {labels['stop_loss_label']} {self._clean_sniper_value(sniper.get('stop_loss', 'N/A'), [labels['stop_loss_label']])} | "
+                            f"🎊 {labels['take_profit_label']} {self._clean_sniper_value(sniper.get('take_profit', 'N/A'), [labels['take_profit_label']])}",
                             "",
                         ])
                     # 仓位策略
@@ -1338,41 +1335,28 @@ class NotificationService(
                 # 狙击点位
                 sniper = battle.get('sniper_points', {}) if battle else {}
                 if sniper:
-                    ideal_buy = str(sniper.get('ideal_buy', ''))
-                    stop_loss = str(sniper.get('stop_loss', ''))
-                    take_profit = str(sniper.get('take_profit', ''))
+                    ideal_buy = sniper.get('ideal_buy', '')
+                    stop_loss = sniper.get('stop_loss', '')
+                    take_profit = sniper.get('take_profit', '')
                     points = []
                     if ideal_buy:
-                        points.append(f"🎯{labels['ideal_buy_label']}:{ideal_buy[:15]}")
+                        points.append(f"🎯{labels['ideal_buy_label']}{self._clean_sniper_value(ideal_buy, [labels['ideal_buy_label']])}")
                     if stop_loss:
-                        points.append(f"🛑{labels['stop_loss_label']}:{stop_loss[:15]}")
+                        points.append(f"🛑{labels['stop_loss_label']}{self._clean_sniper_value(stop_loss, [labels['stop_loss_label']])}")
                     if take_profit:
-                        points.append(f"🎊{labels['take_profit_label']}:{take_profit[:15]}")
+                        points.append(f"🎊{labels['take_profit_label']}{self._clean_sniper_value(take_profit, [labels['take_profit_label']])}")
                     if points:
                         lines.append(" | ".join(points))
                         lines.append("")
                 
-                # 持仓建议
+                # 操作建议（直接展示，不分空仓者/持仓者）
                 pos_advice = core.get('position_advice', {}) if core else {}
                 if pos_advice:
                     no_pos = str(pos_advice.get('no_position', ''))
-                    has_pos = str(pos_advice.get('has_position', ''))
                     if no_pos:
-                        lines.append(f"🆕 {labels['no_position_label']}: {no_pos[:50]}")
-                    if has_pos:
-                        lines.append(f"💼 {labels['has_position_label']}: {has_pos[:50]}")
-                    lines.append("")
+                        lines.append(f"📌 操作建议: {no_pos[:80]}")
                 
-                # 检查清单简化版
-                checklist = battle.get('action_checklist', []) if battle else []
-                if checklist:
-                    # 只显示不通过的项目
-                    failed_checks = [str(c) for c in checklist if str(c).startswith('❌') or str(c).startswith('⚠️')]
-                    if failed_checks:
-                        lines.append(f"**{labels['failed_checks_heading']}**:")
-                        for check in failed_checks[:3]:
-                            lines.append(f"   {check[:40]}")
-                        lines.append("")
+                # 检查清单（不展示检查未通过项）
                 
                 lines.append("---")
                 lines.append("")
@@ -1626,10 +1610,7 @@ class NotificationService(
         pos_advice = core.get('position_advice', {}) if core else {}
         if pos_advice:
             lines.extend([
-                f"### 💼 {labels['position_advice_heading']}",
-                "",
-                f"- 🆕 **{labels['no_position_label']}**: {pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language))}",
-                f"- 💼 **{labels['has_position_label']}**: {pos_advice.get('has_position', labels['continue_holding'])}",
+                f"**操作建议**: {pos_advice.get('no_position', localize_operation_advice(result.operation_advice, report_language))}",
                 "",
             ])
         
